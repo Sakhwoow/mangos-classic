@@ -1,6 +1,8 @@
 -- ruRU localization for quest_template
 -- loc8 = ruRU
 
+ALTER TABLE db_version CHANGE COLUMN required_z2830_01_mangos_icon_name required_z2831_01_mangos_locale_quest_ruRU bit;
+
 DELETE FROM locales_quest WHERE entry = 332;
 INSERT INTO locales_quest (entry, Title_loc8, Details_loc8, Objectives_loc8) VALUES
 (332,
