@@ -28,6 +28,7 @@
 #include "SystemConfig.h"
 #include "revision.h"
 #include "Util/Util.h"
+#include "playerbot/RandomPlayerbotMgr.h"
 
 bool ChatHandler::HandleHelpCommand(char* args)
 {
@@ -88,22 +89,29 @@ bool ChatHandler::HandleStartCommand(char* /*args*/)
 bool ChatHandler::HandleServerInfoCommand(char* /*args*/)
 {
     uint32 activeClientsNum = sWorld.GetActiveSessionCount();
-    uint32 queuedClientsNum = sWorld.GetQueuedSessionCount();
     uint32 maxActiveClientsNum = sWorld.GetMaxActiveSessionCount();
-    uint32 maxQueuedClientsNum = sWorld.GetMaxQueuedSessionCount();
-    std::string str = secsToTimeString(sWorld.GetUptime());
+    uint32 botActive = sRandomPlayerbotMgr.GetActiveBotCount();
+    uint32 currentDiff = sWorld.GetCurrentDiff();
+    uint32 avgDiff = sWorld.GetAverageDiff();
+    uint32 maxDiff = sWorld.GetMaxDiff();
+    uint32 secLevel = uint32(sWorld.GetPlayerSecurityLimit());
 
-    char const* full;
-    if (m_session)
-        full = _FULLVERSION(REVISION_DATE, "|cffffffff|Hurl:" REVISION_ID "|h" REVISION_ID "|h|r");
+    time_t uptimeSecs = sWorld.GetUptime();
+    uint32 uptimeDays    = uint32(uptimeSecs / DAY);
+    uint32 uptimeHours   = uint32(uptimeSecs % DAY / HOUR);
+    uint32 uptimeMinutes = uint32(uptimeSecs % HOUR / MINUTE);
+    uint32 uptimeSeconds = uint32(uptimeSecs % MINUTE);
+
+    PSendSysMessage("Игроков онлайн: %u. Персонажей в мире: %u.", activeClientsNum, botActive);
+    PSendSysMessage("Пик подключений: %u.", maxActiveClientsNum);
+    PSendSysMessage("Минимальный уровень доступа для входа: %u.", secLevel);
+    if (uptimeDays)
+        PSendSysMessage("Время работы сервера: %u дн. %u ч. %u мин. %u сек.", uptimeDays, uptimeHours, uptimeMinutes, uptimeSeconds);
     else
-        full = _FULLVERSION(REVISION_DATE, REVISION_ID);
-    SendSysMessage(full);
-
-    PSendSysMessage(LANG_USING_WORLD_DB, sWorld.GetDBVersion());
-    PSendSysMessage(LANG_USING_EVENT_AI, sWorld.GetCreatureEventAIVersion());
-    PSendSysMessage(LANG_CONNECTED_USERS, activeClientsNum, maxActiveClientsNum, queuedClientsNum, maxQueuedClientsNum);
-    PSendSysMessage(LANG_UPTIME, str.c_str());
+        PSendSysMessage("Время работы сервера: %u ч. %u мин. %u сек.", uptimeHours, uptimeMinutes, uptimeSeconds);
+    PSendSysMessage("Разница времени обновления: %uмс.", currentDiff);
+    PSendSysMessage("|- Среднее: %uмс", avgDiff);
+    PSendSysMessage("|- Макс: %uмс", maxDiff);
 
     return true;
 }
