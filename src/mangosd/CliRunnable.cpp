@@ -67,7 +67,7 @@ void commandFinished(bool /*sucess*/)
     rl_on_new_line();
     rl_redisplay();
 #else
-    printf("mangos>");
+    printf("AC>");
     fflush(stdout);
 #endif
 }
@@ -623,7 +623,7 @@ void CliRunnable::run()
 
     while (!World::IsStopped())
     {
-        char* command_str = readline("mangos>");
+        char* command_str = readline("AC>");
         if (!command_str)
         {
             World::StopNow(SHUTDOWN_EXIT_CODE);
@@ -647,7 +647,7 @@ void CliRunnable::run()
 #else
     char commandbuf[256];
 
-    printf("mangos>");
+    printf("AC>");
 
 #ifdef __unix__
     int fd = fileno(stdin);
@@ -678,13 +678,13 @@ void CliRunnable::run()
                 }
             if (!*command_str)
             {
-                printf("mangos>");
+                printf("AC>");
                 continue;
             }
             std::string command;
             if (!consoleToUtf8(command_str, command))
             {
-                printf("mangos>");
+                printf("AC>");
                 continue;
             }
             sWorld.QueueCliCommand(new CliCommandHolder(0, SEC_CONSOLE, command.c_str(), &utf8print, &commandFinished));
