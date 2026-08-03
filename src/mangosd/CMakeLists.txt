@@ -118,6 +118,17 @@ set_target_properties(${EXECUTABLE_NAME} PROPERTIES LINK_FLAGS
   "${EXECUTABLE_LINK_FLAGS}"
 )
 
+if(UNIX AND NOT APPLE)
+  find_library(READLINE_LIBRARY NAMES readline)
+  if(READLINE_LIBRARY)
+    target_link_libraries(${EXECUTABLE_NAME} ${READLINE_LIBRARY})
+    target_compile_definitions(${EXECUTABLE_NAME} PRIVATE HAVE_READLINE)
+    message(STATUS "readline found: ${READLINE_LIBRARY}")
+  else()
+    message(STATUS "readline not found, console line editing disabled")
+  endif()
+endif()
+
 if (NOT WIN32)
   install(FILES run-mangosd DESTINATION ${BIN_DIR})
 endif()

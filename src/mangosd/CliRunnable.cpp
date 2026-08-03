@@ -33,6 +33,10 @@
 #include "Maps/MapManager.h"
 #include "Entities/Player.h"
 #include "Chat/Chat.h"
+#ifdef HAVE_READLINE
+#include <readline/readline.h>
+#include <readline/history.h>
+#endif
 
 void utf8print(const char* str)
 {
@@ -59,8 +63,13 @@ void utf8print(const char* str)
 
 void commandFinished(bool /*sucess*/)
 {
+#ifdef HAVE_READLINE
+    rl_on_new_line();
+    rl_redisplay();
+#else
     printf("mangos>");
     fflush(stdout);
+#endif
 }
 
 /// Delete a user account and all associated characters in this realm
@@ -603,36 +612,57 @@ void CliRunnable::run()
     ///- Init new SQL thread for the world database (one connection call enough)
     WorldDatabase.ThreadStart();                            // let thread do safe mySQL requests
 
-    char commandbuf[256];
-
     ///- Display the list of available CLI functions then beep
     sLog.outString();
 
     if (sConfig.GetBoolDefault("BeepAtStart", true))
         printf("\a");                                       // \a = Alert
 
-    // print this here the first time
-    // later it will be printed after command queue updates
+#ifdef HAVE_READLINE
+    using_history();
+
+    while (!World::IsStopped())
+    {
+        char* command_str = readline("mangos>");
+        if (!command_str)
+        {
+            World::StopNow(SHUTDOWN_EXIT_CODE);
+            break;
+        }
+        for (int x = 0; command_str[x]; ++x)
+            if (command_str[x] == '\r' || command_str[x] == '\n')
+            {
+                command_str[x] = 0;
+                break;
+            }
+        if (*command_str)
+        {
+            add_history(command_str);
+            std::string command;
+            if (consoleToUtf8(command_str, command))
+                sWorld.QueueCliCommand(new CliCommandHolder(0, SEC_CONSOLE, command.c_str(), &utf8print, &commandFinished));
+        }
+        free(command_str);
+    }
+#else
+    char commandbuf[256];
+
     printf("mangos>");
 
 #ifdef __unix__
-    //Set stdin IO to nonblocking - prevent Server from hanging in shutdown process till enter is pressed
     int fd = fileno(stdin);
     int flags = fcntl(fd, F_GETFL, 0);
     flags |= O_NONBLOCK;
     fcntl(fd, F_SETFL, flags);
 #endif
 
-    ///- As long as the World is running (no World::m_stopEvent), get the command line and handle it
     while (!World::IsStopped())
     {
         fflush(stdout);
 #ifdef __unix__
         while (!kb_hit_return() && !World::IsStopped())
         {
-            // With this, we limit CLI to 10commands/second
             std::this_thread::sleep_for(std::chrono::nanoseconds(100000));
-            // Check for world stoppage after each sleep interval
             if (World::IsStopped())
                 break;
         }
@@ -646,21 +676,17 @@ void CliRunnable::run()
                     command_str[x] = 0;
                     break;
                 }
-
-
             if (!*command_str)
             {
                 printf("mangos>");
                 continue;
             }
-
             std::string command;
-            if (!consoleToUtf8(command_str, command))       // convert from console encoding to utf8
+            if (!consoleToUtf8(command_str, command))
             {
                 printf("mangos>");
                 continue;
             }
-
             sWorld.QueueCliCommand(new CliCommandHolder(0, SEC_CONSOLE, command.c_str(), &utf8print, &commandFinished));
         }
         else if (feof(stdin))
@@ -668,6 +694,7 @@ void CliRunnable::run()
             World::StopNow(SHUTDOWN_EXIT_CODE);
         }
     }
+#endif
 
     ///- End the database thread
     WorldDatabase.ThreadEnd();                              // free mySQL thread resources
