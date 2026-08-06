@@ -324,7 +324,6 @@ int Master::Run()
         cliThread->wait();
 #else
 
-        fclose(stdin);  // send EOF to unblock readline/fgets so CLI thread exits cleanly
         cliThread->wait();
 
 #endif

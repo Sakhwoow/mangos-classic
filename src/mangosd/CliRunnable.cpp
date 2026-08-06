@@ -623,6 +623,26 @@ void CliRunnable::run()
 
     while (!World::IsStopped())
     {
+        // Poll stdin every 100ms so the thread can detect World::IsStopped()
+        // instead of blocking forever inside readline().
+        fd_set fds;
+        struct timeval tv;
+        bool dataReady = false;
+        while (!World::IsStopped())
+        {
+            FD_ZERO(&fds);
+            FD_SET(STDIN_FILENO, &fds);
+            tv.tv_sec = 0;
+            tv.tv_usec = 100000;
+            if (select(STDIN_FILENO + 1, &fds, nullptr, nullptr, &tv) > 0 && FD_ISSET(STDIN_FILENO, &fds))
+            {
+                dataReady = true;
+                break;
+            }
+        }
+        if (!dataReady)
+            break;
+
         char* command_str = readline("AC>");
         if (!command_str)
         {
