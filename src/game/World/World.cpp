@@ -2137,6 +2137,18 @@ void World::ShutdownMsg(bool show /*= false*/, Player* player /*= nullptr*/)
         ServerMessageType msgid = (m_ShutdownMask & SHUTDOWN_MASK_RESTART) ? SERVER_MSG_RESTART_TIME : SERVER_MSG_SHUTDOWN_TIME;
 
         SendServerMessage(msgid, str.c_str(), player);
+
+        // Broadcast visible system chat message so players see the countdown in chat
+        std::string chatMsg = std::string(m_ShutdownMask & SHUTDOWN_MASK_RESTART
+            ? "|cffFF4500[Сервер]|r Перезагрузка через "
+            : "|cffFF4500[Сервер]|r Остановка через ") + secsToTimeString(m_ShutdownTimer, true);
+        WorldPacket chatData;
+        ChatHandler::BuildChatPacket(chatData, CHAT_MSG_SYSTEM, chatMsg.c_str());
+        if (player)
+            player->GetSession()->SendPacket(chatData);
+        else
+            SendGlobalMessage(chatData);
+
         DEBUG_LOG("Server is %s in %s", (m_ShutdownMask & SHUTDOWN_MASK_RESTART ? "restart" : "shutting down"), str.c_str());
     }
 }
